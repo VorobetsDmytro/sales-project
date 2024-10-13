@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  customers-api:
+    container_name: customers-api
+    build:
+      context: ./customers
+    env_file:
+      - ./customers/.env
+    volumes:
+      - /app/node_modules
+    ports:
+      - 3003:3003
+    command: sh -c "yarn migrate:up && yarn seed:up && yarn start"
+    depends_on:
+      customers-db:
+        condition: service_healthy
+    networks:
+      - sales-network
+  products-api:
+    container_name: products-api
+    build:
+      context: ./products
+    env_file:
+      - ./products/.env
+    volumes:
+      - /app/node_modules
+    ports:
+      - 3001:3001
+    command: sh -c "yarn migrate:up && yarn seed:up && yarn start"
+    depends_on:
+      products-db:
+        condition: service_healthy
+    networks:
+      - sales-network
+  orders-api:
+    container_name: orders-api
+    build:
+      context: ./sales
+    env_file:
+      - ./sales/.env
+    volumes:
+      - /app/node_modules
+    ports:
+      - 3002:3002
+    command: sh -c "yarn migrate:up && yarn seed:up && yarn start"
+    depends_on:
+      orders-db:
+        condition: service_healthy
+    networks:
+      - sales-network
+  search-api:
+    container_name: search-api
+    build:
+      context: ./search
+    env_file:
+      - ./search/.env
+    volumes:
+      - /app/node_modules
+    ports:
+      - 3000:3000
+    command: sh -c "yarn start"
+    networks:
+      - sales-network
+  products-db:
+    image: postgres:latest
+    container_name: products-db
+    env_file:
+      - ./.env.products-db
+    ports:
+      - "5433:5432"
+    expose:
+      - "5432"
+    volumes:
+      - products-db:/var/lib/postgresql/data
+    networks:
+      - sales-network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  customers-db:
+    image: postgres:latest
+    container_name: customers-db
+    env_file:
+      - ./.env.customers-db
+    ports:
+      - "5434:5432"
+    expose:
+      - "5432"
+    volumes:
+      - customers-db:/var/lib/postgresql/data
+    networks:
+      - sales-network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+  orders-db:
+    image: postgres:latest
+    container_name: orders-db
+    env_file:
+      - ./.env.orders-db
+    ports:
+      - "5435:5432"
+    expose:
+      - "5432"
+    volumes:
+      - orders-db:/var/lib/postgresql/data
+    networks:
+      - sales-network
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  products-db:
+  customers-db:
+  orders-db:
+
+networks:
+  sales-network:
+    external: true
